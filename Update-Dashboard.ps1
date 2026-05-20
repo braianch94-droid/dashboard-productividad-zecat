@@ -7,8 +7,8 @@
 # STAFFING: solo lineas de picking regular (SIN/CON LOGO)
 # ============================================================
 param(
-    [string]$Source  = "C:\Users\bchevasco\OneDrive - Articulos Promocionales SA\Escritorio\Productividad\productividad.xlsx",
-    [string]$Output  = "C:\Users\bchevasco\OneDrive - Articulos Promocionales SA\Escritorio\Productividad\Dashboard_Productividad.xlsx",
+    [string]$Source  = "$PSScriptRoot\productividad.xlsx",
+    [string]$Output  = "$PSScriptRoot\Dashboard_Productividad.xlsx",
     [string]$LezFilter = "Lezcano"
 )
 
