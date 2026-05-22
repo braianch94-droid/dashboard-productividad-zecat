@@ -2370,11 +2370,13 @@ $pickersJs
 
 chartEvol.data.datasets.slice(0,-1).forEach(function(ds){pickerDataFull.push(ds.data.slice());pickerOrigColors.push(ds.borderColor);});
 
+const _evol30Target=$($TARGET*4);
 const chartEvol30=new Chart('chartEvol30',{type:'line',data:{
   labels:evol30Labels,datasets:[
-    {label:'Total lineas equipo',data:evol30Data,borderColor:'#2563eb',backgroundColor:'rgba(37,99,235,.08)',borderWidth:2.5,tension:.3,fill:true,pointRadius:3,pointHoverRadius:5}
+    {label:'Total lineas equipo',data:evol30Data,borderColor:'#2563eb',backgroundColor:'rgba(37,99,235,.08)',borderWidth:2.5,tension:.3,fill:true,pointRadius:3,pointHoverRadius:5},
+    {label:'Target equipo ($($TARGET)×4)',data:Array(evol30Labels.length).fill(_evol30Target),borderColor:'rgba(220,38,38,.65)',borderWidth:1.5,borderDash:[7,4],pointRadius:0,fill:false,tension:0}
   ]},options:{responsive:true,maintainAspectRatio:false,
-  plugins:{legend:{display:false},tooltip:{callbacks:{label:function(ctx){return ctx.parsed.y.toLocaleString('es-AR')+' lineas';}}}},
+  plugins:{legend:{display:true,position:'bottom',labels:{boxWidth:12,font:{size:10},color:'#444444'}},tooltip:{callbacks:{label:function(ctx){return ctx.dataset.label+': '+ctx.parsed.y.toLocaleString('es-AR')+(ctx.datasetIndex===0?' lineas':'');}}}},
   scales:{y:{min:0,grid:{color:'#eeeeee'},ticks:{color:'#666666'}},x:{grid:{display:false},ticks:{color:'#666666',font:{size:9},maxTicksLimit:15}}}}});
 
 function setGrpFilter(g){
@@ -2390,6 +2392,7 @@ function setGrpFilter(g){
   chartEvol30.data.datasets[0].data=data;
   chartEvol30.data.datasets[0].borderColor=col;
   chartEvol30.data.datasets[0].backgroundColor=bg;
+  // dataset[1] = target line, no se toca
   chartEvol30.update();
   // Titulo
   var lbl=g==='cl'?'Con Logo':g==='sl'?'Sin Logo':'Con Logo + Sin Logo';
