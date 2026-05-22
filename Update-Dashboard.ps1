@@ -1574,11 +1574,15 @@ try {
     $evol30Dates=@($pkDay.Keys|Where-Object{$allResp[$_.Split("|")[0]]}|ForEach-Object{$_.Split("|")[1]}|Sort-Object -Unique|Select-Object -Last 30)
     $evol30LblParts=[System.Collections.Generic.List[string]]::new()
     $evol30DataParts=[System.Collections.Generic.List[string]]::new()
+    $evol30TgtParts=[System.Collections.Generic.List[string]]::new()
     foreach($e30d in $evol30Dates){
         $e30T=0
         foreach($rsp in $sortedResp){$e30k="$rsp|$e30d";if($pkDay[$e30k]){$e30T+=$pkDay[$e30k]}}
         $evol30LblParts.Add("'$([datetime]::Parse($e30d).ToString('dd/MM'))'")
         $evol30DataParts.Add("$([int]$e30T)")
+        $e30ym=$e30d.Substring(0,7)
+        $e30pick=if($pickeadoresByMon[$e30ym]){$pickeadoresByMon[$e30ym]}else{4}
+        $evol30TgtParts.Add("$($e30pick*$TARGET)")
     }
     $jsEvol30Labels="["+($evol30LblParts -join ",")+"]"
     $jsEvol30Data="["+($evol30DataParts -join ",")+"]"
@@ -1592,6 +1596,7 @@ try {
     }
     $jsEvol30CL="["+($evol30CLParts -join ",")+"]"
     $jsEvol30SL="["+($evol30SLParts -join ",")+"]"
+    $jsEvol30Target="["+($evol30TgtParts -join ",")+"]"
 
     $html = @"
 <!DOCTYPE html>
@@ -1969,6 +1974,7 @@ const evol30Labels=$jsEvol30Labels;
 const evol30Data=$jsEvol30Data;
 const evol30CL=$jsEvol30CL;
 const evol30SL=$jsEvol30SL;
+const evol30Target=$jsEvol30Target;
 var _grpFilter='all';
 
 // Tab navigation
@@ -2416,11 +2422,10 @@ $pickersJs
 
 chartEvol.data.datasets.slice(0,-1).forEach(function(ds){pickerDataFull.push(ds.data.slice());pickerOrigColors.push(ds.borderColor);});
 
-const _evol30Target=$($TARGET*4);
 const chartEvol30=new Chart('chartEvol30',{type:'line',data:{
   labels:evol30Labels,datasets:[
     {label:'Total lineas equipo',data:evol30Data,borderColor:'#2563eb',backgroundColor:'rgba(37,99,235,.08)',borderWidth:2.5,tension:.3,fill:true,pointRadius:3,pointHoverRadius:5},
-    {label:'Target equipo ($($TARGET)×4)',data:Array(evol30Labels.length).fill(_evol30Target),borderColor:'rgba(220,38,38,.65)',borderWidth:1.5,borderDash:[7,4],pointRadius:0,fill:false,tension:0}
+    {label:'Target equipo (pickers×$TARGET)',data:evol30Target,borderColor:'rgba(220,38,38,.65)',borderWidth:1.5,borderDash:[7,4],pointRadius:0,fill:false,tension:0}
   ]},options:{responsive:true,maintainAspectRatio:false,
   plugins:{legend:{display:true,position:'bottom',labels:{boxWidth:12,font:{size:10},color:'#444444'}},tooltip:{callbacks:{label:function(ctx){return ctx.dataset.label+': '+ctx.parsed.y.toLocaleString('es-AR')+(ctx.datasetIndex===0?' lineas':'');}}}},
   scales:{y:{min:0,grid:{color:'#eeeeee'},ticks:{color:'#666666'}},x:{grid:{display:false},ticks:{color:'#666666',font:{size:9},maxTicksLimit:15}}}}});
