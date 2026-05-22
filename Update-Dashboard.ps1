@@ -18,7 +18,7 @@ $NOW     = Get-Date
 # Operarios excluidos del cálculo de PRODUCTIVIDAD del equipo (extras, no-pickers regulares)
 # Usar fragmentos del nombre, sin distinguir mayúsculas. Ej: "AIRALA" matchea "AIRALA CESAR".
 # Agregar más separados por coma. "Falta definir" se excluye siempre.
-$ExcludeFromProd = @("AIRALA","Falta definir")
+$ExcludeFromProd = @("AIRALA","Falta definir","Pie de Maquina","MAQUINA","Muestra Simple","LEZCANO")
 
 function IsExcludedFromProd($name){
     foreach($ex in $ExcludeFromProd){ if($name -like "*$ex*"){return $true} }
@@ -308,7 +308,7 @@ try {
     # AGREGACIONES
     # ===========================================================
     $sortedMon  = $allMon.Keys  | Sort-Object
-    $sortedResp = $allResp.Keys | Sort-Object
+    $sortedResp = @($allResp.Keys | Where-Object{-not (IsExcludedFromProd $_)} | Sort-Object)
     $latestYM   = $sortedMon[-1]
     $lyParts    = $latestYM.Split("-")
     $latestNom  = "$($MES_NOM[[int]$lyParts[1]]) $($lyParts[0])"
@@ -1442,7 +1442,7 @@ try {
         $mStaffNec=if($sr){$sr.PersonasNecesarias}else{0}
         $mStaffAct=$mPickOficial
         $pickerParts=[System.Collections.Generic.List[string]]::new()
-        foreach($op in $mRows){
+        foreach($op in $mProdRows){
             $rn=$op.Resp -replace "'",""
             $tr=if($trendByResp[$op.Resp]){($trendByResp[$op.Resp].Txt -replace "'","")}else{"-"}
             $pickerParts.Add("{resp:'$rn',dias:$($op.Dias),olas:$($op.Olas),lineas:$($op.Lineas),ld:$($op.LineasDia.ToString($IC)),cumpl:$($op.Cumplim.ToString($IC)),unidades:$($op.Unidades),recCnt:$($op.RecCnt),trend:'$tr'}")
