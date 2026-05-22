@@ -1335,6 +1335,42 @@ try {
 
     # ---- Construir datos para charts y monthlyData JS ----
     $allYears = @{}
+    # Leer pickeadores oficiales por mes desde estructura ARG - CHI.xlsx
+    $pickeadoresByMon = @{}
+    $estructuraPath = "C:\Users\bchevasco\OneDrive - Articulos Promocionales SA\Escritorio\Inteligencia Artificial\Personal\estructura ARG - CHI.xlsx"
+    if(Test-Path $estructuraPath){
+        try{
+            $xtWb = $xl.Workbooks.Open($estructuraPath)
+            $xtWs = $xtWb.Sheets.Item("ARG")
+            $xtArr = $xtWs.UsedRange.Value2
+            $xtRows = $xtArr.GetUpperBound(0)
+            $xtCols = $xtArr.GetUpperBound(1)
+            $pkCol=$null; $mesCol=$null
+            for($c=1;$c -le $xtCols;$c++){
+                $h="$($xtArr[1,$c])".Trim()
+                if($h -like "*Pickeadores*"){$pkCol=$c}
+                if($h -eq "Mes"){$mesCol=$c}
+            }
+            if($pkCol -and $mesCol){
+                for($r=2;$r -le $xtRows;$r++){
+                    $mesVal=$xtArr[$r,$mesCol]; $pkVal=$xtArr[$r,$pkCol]
+                    if($mesVal -and $pkVal){
+                        try{
+                            $mesDate=[datetime]::FromOADate([double]$mesVal)
+                            $ymx="$($mesDate.Year)-$('{0:00}' -f $mesDate.Month)"
+                            $pkInt=[int]$pkVal
+                            if(-not $pickeadoresByMon[$ymx] -or $pickeadoresByMon[$ymx] -lt $pkInt){
+                                $pickeadoresByMon[$ymx]=$pkInt
+                            }
+                        }catch{}
+                    }
+                }
+            }
+            $xtWb.Close($false)
+            Write-Host "[$($NOW.ToString('HH:mm:ss'))] Pickeadores cargados: $($pickeadoresByMon.Count) meses"
+        }catch{ Write-Host "  [WARN] No se pudo leer estructura: $_" }
+    }
+
     $jsMonthlyDataParts = [System.Collections.Generic.List[string]]::new()
     $jsAllDataList = [System.Collections.Generic.List[string]]::new()
     $jsMonLabelsList=[System.Collections.Generic.List[string]]::new()
@@ -1357,7 +1393,11 @@ try {
         $mR=@($sumRows|Where-Object{$_.YM -eq $mon})
         if($mR.Count){
             $mRProd=@($mR|Where-Object{-not (IsExcludedFromProd $_.Resp)})
-            $tld=if($mRProd.Count){[Math]::Round(($mRProd|Measure-Object LineasDia -Average).Average,1)}else{0}
+            $mWkDays=if($staffByMes[$mon]){[int]$staffByMes[$mon].WorkDays.Count}else{1}
+            $mWkDays=if($mWkDays -gt 0){$mWkDays}else{1}
+            $mProdTotL=($mRProd|Measure-Object Lineas -Sum).Sum
+            $mPick=if($pickeadoresByMon[$mon]){$pickeadoresByMon[$mon]}else{[math]::Max($mRProd.Count,1)}
+            $tld=[Math]::Round($mProdTotL/$mWkDays/$mPick,1)
             $jsTeamLDList.Add($tld.ToString($IC))
             $jsTeamLinList.Add(($mR|Measure-Object Lineas -Sum).Sum.ToString($IC))
             if($tld -ge $TARGET){$jsTeamColors.Add("'#16a34a'")}
@@ -1365,7 +1405,8 @@ try {
             else{$jsTeamColors.Add("'#dc2626'")}
         }else{$jsTeamLDList.Add("0");$jsTeamLinList.Add("0");$jsTeamColors.Add("'#dc2626'")}
         $sr2=$staffRows|Where-Object{$_.YM -eq $mon}|Select-Object -First 1
-        if($sr2){$jsStaffNecList.Add($sr2.PersonasNecesarias.ToString($IC));$jsStaffActList.Add($sr2.PersonasActuales.ToString($IC))}
+        $sr2Pick=if($pickeadoresByMon[$mon]){$pickeadoresByMon[$mon]}else{if($sr2){$sr2.PersonasActuales}else{0}}
+        if($sr2){$jsStaffNecList.Add($sr2.PersonasNecesarias.ToString($IC));$jsStaffActList.Add($sr2Pick.ToString($IC))}
         else{$jsStaffNecList.Add("0");$jsStaffActList.Add("0")}
         $mr2=$mermaRows|Where-Object{$_.YM -eq $mon}|Select-Object -First 1
         if($mr2){
@@ -1389,12 +1430,17 @@ try {
         # Excluir extras del cálculo de productividad del equipo
         $mProdRows=@($mRows|Where-Object{-not (IsExcludedFromProd $_.Resp)})
         $mTotOps=$mProdRows.Count
-        $mAvgLD=if($mTotOps){[Math]::Round(($mProdRows|Measure-Object LineasDia -Average).Average,1)}else{0}
+        # Usar pickeadores oficiales del archivo de estructura como denominador real
+        $mPickOficial=if($pickeadoresByMon[$mon]){$pickeadoresByMon[$mon]}else{[math]::Max($mTotOps,1)}
+        $mWDays=if($staffByMes[$mon]){[int]$staffByMes[$mon].WorkDays.Count}else{1}
+        $mWDays=if($mWDays -gt 0){$mWDays}else{1}
+        $mProdTotalL=($mProdRows|Measure-Object Lineas -Sum).Sum
+        $mAvgLD=[Math]::Round($mProdTotalL/$mWDays/$mPickOficial,1)
         $mCumAv=[Math]::Round($mAvgLD/$TARGET*100,1)
         $mRateG=if($mTotL){[Math]::Round($mTotRC/($mTotL/1000),2)}else{0}
         $sr=$staffRows|Where-Object{$_.YM -eq $mon}|Select-Object -First 1
         $mStaffNec=if($sr){$sr.PersonasNecesarias}else{0}
-        $mStaffAct=if($sr){$sr.PersonasActuales}else{0}
+        $mStaffAct=$mPickOficial
         $pickerParts=[System.Collections.Generic.List[string]]::new()
         foreach($op in $mRows){
             $rn=$op.Resp -replace "'",""
@@ -1402,7 +1448,7 @@ try {
             $pickerParts.Add("{resp:'$rn',dias:$($op.Dias),olas:$($op.Olas),lineas:$($op.Lineas),ld:$($op.LineasDia.ToString($IC)),cumpl:$($op.Cumplim.ToString($IC)),unidades:$($op.Unidades),recCnt:$($op.RecCnt),trend:'$tr'}")
         }
         $pickersArr="["+($pickerParts -join ",")+"]"
-        $jsMonthlyDataParts.Add("'$mon':{totOps:$mTotOps,avgLD:$($mAvgLD.ToString($IC)),cumAv:$($mCumAv.ToString($IC)),totL:$mTotL,totU:$mTotU,totRC:$mTotRC,rateG:$($mRateG.ToString($IC)),totOlas:$mTotOlas,staffNec:$($mStaffNec.ToString($IC)),staffAct:$($mStaffAct.ToString($IC)),pickers:$pickersArr}")
+        $jsMonthlyDataParts.Add("'$mon':{totOps:$mTotOps,pickeadores:$mPickOficial,avgLD:$($mAvgLD.ToString($IC)),cumAv:$($mCumAv.ToString($IC)),totL:$mTotL,totU:$mTotU,totRC:$mTotRC,rateG:$($mRateG.ToString($IC)),totOlas:$mTotOlas,staffNec:$($mStaffNec.ToString($IC)),staffAct:$($mStaffAct.ToString($IC)),pickers:$pickersArr}")
     }
     $jsMonthlyData = "{" + ($jsMonthlyDataParts -join ",") + "}"
 
@@ -1991,7 +2037,7 @@ function applyFilter(){
     var d=monthlyData[k];
     if(!d) return;
     teamValidM++;
-    aggOpsSum+=d.totOps; aggLDSum+=d.avgLD; aggSN+=d.staffNec; aggSA+=d.staffAct;
+    aggOpsSum+=(d.pickeadores||d.totOps); aggLDSum+=d.avgLD; aggSN+=d.staffNec; aggSA+=(d.pickeadores||d.staffAct);
     if(selOp==='all'){aggL+=d.totL;aggU+=d.totU;aggRC+=d.totRC;aggOlas+=d.totOlas;}
     d.pickers.forEach(function(pk){
       if(selOp!=='all'&&pk.resp!==selOp) return;
