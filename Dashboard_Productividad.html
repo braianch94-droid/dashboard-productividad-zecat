@@ -100,6 +100,13 @@ body.dark .info-box{background:#1e293b;border-color:#334155;color:#94a3b8}
 tfoot td{border-top:2px solid #e0e0e0;font-weight:700}
 body.dark tfoot tr{background:#0f172a}
 body.dark tfoot td{color:#e2e8f0;border-top-color:#334155}
+.grp-btns{display:flex;gap:8px;margin-bottom:14px;flex-wrap:wrap}
+.grp-btn{border:1.5px solid #cccccc;border-radius:20px;padding:5px 16px;font-size:12px;font-weight:600;cursor:pointer;background:white;color:#555555;transition:all .18s}
+.grp-btn:hover{border-color:#2563eb;color:#2563eb}
+.grp-btn.active{background:#2563eb;border-color:#2563eb;color:white}
+body.dark .grp-btn{background:#1e293b;border-color:#334155;color:#94a3b8}
+body.dark .grp-btn:hover{border-color:#3b82f6;color:#60a5fa}
+body.dark .grp-btn.active{background:#2563eb;border-color:#2563eb;color:white}
 #themeToggle{background:rgba(255,255,255,.12);border:1px solid rgba(255,255,255,.18);border-radius:50px;width:42px;height:42px;color:white;cursor:pointer;font-size:18px;display:flex;align-items:center;justify-content:center;transition:all .2s;flex-shrink:0}
 #themeToggle:hover{background:rgba(255,255,255,.22);transform:scale(1.08)}
 </style>
@@ -116,7 +123,7 @@ body.dark tfoot td{color:#e2e8f0;border-top-color:#334155}
       <h1>Dashboard de Productividad</h1>
     </div>
   </div>
-  <div class="badge">Actualizado: 22/05/2026 12:37<br>Target picking: 84 lin/d&iacute;a</div>
+  <div class="badge">Actualizado: 22/05/2026 13:57<br>Target picking: 84 lin/d&iacute;a</div>
   <button id="themeToggle" onclick="toggleTheme()" title="Cambiar tema claro / oscuro" aria-label="Cambiar tema"><span id="themeIcon">&#9790;</span></button>
 </header>
 
@@ -160,10 +167,15 @@ body.dark tfoot td{color:#e2e8f0;border-top-color:#334155}
 <!-- ===== SECCION: PICKING ===== -->
 <div id="sec-picking" class="sec active">
 
+<div class="grp-btns">
+  <button class="grp-btn active" id="grpBtnAll" onclick="setGrpFilter('all')">Todos (Con + Sin Logo)</button>
+  <button class="grp-btn" id="grpBtnCL" onclick="setGrpFilter('cl')">Con Logo</button>
+  <button class="grp-btn" id="grpBtnSL" onclick="setGrpFilter('sl')">Sin Logo</button>
+</div>
 <div class="charts-row c1">
   <div class="chart-card" style="border-top:3px solid #2563eb;margin-bottom:0">
-    <div class="chart-title">&#128200; Evoluci&oacute;n diaria del equipo &mdash; &uacute;ltimos 30 d&iacute;as h&aacute;biles</div>
-    <div class="chart-subtitle">Total l&iacute;neas picking regular (SIN LOGO + CON LOGO) &mdash; equipo completo</div>
+    <div class="chart-title" id="evol30Title">&#128200; Evoluci&oacute;n diaria del equipo &mdash; &uacute;ltimos 30 d&iacute;as h&aacute;biles</div>
+    <div class="chart-subtitle" id="evol30Sub">Total l&iacute;neas picking regular (Con Logo + Sin Logo) &mdash; equipo completo</div>
     <div style="position:relative;height:200px"><canvas id="chartEvol30"></canvas></div>
   </div>
 </div>
@@ -353,7 +365,7 @@ body.dark tfoot td{color:#e2e8f0;border-top-color:#334155}
 </div><!-- /sec-control -->
 
 </div><!-- /container -->
-<footer>Dashboard v5 &mdash; Zecat Art&iacute;culos Promocionales SA &nbsp;|&nbsp; 22/05/2026 12:37</footer>
+<footer>Dashboard v5 &mdash; Zecat Art&iacute;culos Promocionales SA &nbsp;|&nbsp; 22/05/2026 13:57</footer>
 
 <script>
 Chart.defaults.font.family='Arial,sans-serif';
@@ -376,9 +388,12 @@ const merma1L=[454,256,617,431,234];
 const merma2L=[133,342,83,133,71];
 const recMonthly={'2026-01':{cnt:13,byOp:{'AIRALA CESAR':1,'ARMOA TAMARA':3,'BRUN TOMAS':5,'LAURATO MARTINEZ':2,'ROMERO MELANIE':2},byCat:{'El packaging presenta fallas o hay faltantes de estos.':2,'Hay un producto/s defectuoso/s o con fallas.':9,'Recibí una cantidad distinta a la comprada.':2},byOpCat:{'AIRALA CESAR':{'El packaging presenta fallas o hay faltantes de estos.':1},'ARMOA TAMARA':{'Hay un producto/s defectuoso/s o con fallas.':3},'BRUN TOMAS':{'El packaging presenta fallas o hay faltantes de estos.':1,'Hay un producto/s defectuoso/s o con fallas.':3,'Recibí una cantidad distinta a la comprada.':1},'LAURATO MARTINEZ':{'Hay un producto/s defectuoso/s o con fallas.':1,'Recibí una cantidad distinta a la comprada.':1},'ROMERO MELANIE':{'Hay un producto/s defectuoso/s o con fallas.':2}}},'2026-02':{cnt:20,byOp:{'AIRALA CESAR':1,'ARCE ELIAS':1,'ARMOA TAMARA':5,'BRUN TOMAS':4,'LAURATO MARTINEZ':5,'ROMERO MELANIE':4},byCat:{'El packaging presenta fallas o hay faltantes de estos.':1,'Hay un producto/s defectuoso/s o con fallas.':13,'Recibi otro producto.':2,'Recibí una cantidad distinta a la comprada.':4},byOpCat:{'AIRALA CESAR':{'Hay un producto/s defectuoso/s o con fallas.':1},'ARCE ELIAS':{'Hay un producto/s defectuoso/s o con fallas.':1},'ARMOA TAMARA':{'Hay un producto/s defectuoso/s o con fallas.':2,'Recibí una cantidad distinta a la comprada.':3},'BRUN TOMAS':{'Hay un producto/s defectuoso/s o con fallas.':2,'Recibi otro producto.':1,'Recibí una cantidad distinta a la comprada.':1},'LAURATO MARTINEZ':{'El packaging presenta fallas o hay faltantes de estos.':1,'Hay un producto/s defectuoso/s o con fallas.':4},'ROMERO MELANIE':{'Hay un producto/s defectuoso/s o con fallas.':3,'Recibi otro producto.':1}}},'2026-03':{cnt:18,byOp:{'ARMOA TAMARA':4,'BRUN TOMAS':9,'LAURATO MARTINEZ':2,'OCAMPO BRIAN':1,'ROMERO MELANIE':2},byCat:{'Consultas/comunicaciones administrativas.':1,'Hay un producto/s defectuoso/s o con fallas.':10,'Recibi otro producto.':3,'Recibí una cantidad distinta a la comprada.':4},byOpCat:{'ARMOA TAMARA':{'Hay un producto/s defectuoso/s o con fallas.':1,'Recibi otro producto.':1,'Recibí una cantidad distinta a la comprada.':2},'BRUN TOMAS':{'Consultas/comunicaciones administrativas.':1,'Hay un producto/s defectuoso/s o con fallas.':5,'Recibi otro producto.':2,'Recibí una cantidad distinta a la comprada.':1},'LAURATO MARTINEZ':{'Hay un producto/s defectuoso/s o con fallas.':2},'OCAMPO BRIAN':{'Recibí una cantidad distinta a la comprada.':1},'ROMERO MELANIE':{'Hay un producto/s defectuoso/s o con fallas.':2}}},'2026-04':{cnt:22,byOp:{'ARMOA TAMARA':12,'BRUN TOMAS':8,'LAURATO MARTINEZ':2},byCat:{'El packaging presenta fallas o hay faltantes de estos.':1,'Hay un producto/s defectuoso/s o con fallas.':8,'Recibi otro producto.':6,'Recibí una cantidad distinta a la comprada.':6,'Reclamo por plazo de entrega.':1},byOpCat:{'ARMOA TAMARA':{'El packaging presenta fallas o hay faltantes de estos.':1,'Hay un producto/s defectuoso/s o con fallas.':5,'Recibi otro producto.':2,'Recibí una cantidad distinta a la comprada.':4},'BRUN TOMAS':{'Hay un producto/s defectuoso/s o con fallas.':2,'Recibi otro producto.':4,'Recibí una cantidad distinta a la comprada.':2},'LAURATO MARTINEZ':{'Hay un producto/s defectuoso/s o con fallas.':1,'Reclamo por plazo de entrega.':1}}},'2026-05':{cnt:16,byOp:{'ARMOA TAMARA':3,'BRUN TOMAS':5,'CACERES EDISON':2,'LAURATO MARTINEZ':6},byCat:{'Consultas/comunicaciones administrativas.':1,'El packaging presenta fallas o hay faltantes de estos.':1,'Hay un producto/s defectuoso/s o con fallas.':9,'Recibi otro producto.':3,'Recibí una cantidad distinta a la comprada.':2},byOpCat:{'ARMOA TAMARA':{'Hay un producto/s defectuoso/s o con fallas.':2,'Recibi otro producto.':1},'BRUN TOMAS':{'Consultas/comunicaciones administrativas.':1,'Hay un producto/s defectuoso/s o con fallas.':2,'Recibi otro producto.':2},'CACERES EDISON':{'Hay un producto/s defectuoso/s o con fallas.':1,'Recibí una cantidad distinta a la comprada.':1},'LAURATO MARTINEZ':{'El packaging presenta fallas o hay faltantes de estos.':1,'Hay un producto/s defectuoso/s o con fallas.':4,'Recibí una cantidad distinta a la comprada.':1}}}};
 const MES=['','Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
-const day7Rows=[{f:'12/05',d:'Ma',ops:6,lines:452,lpo:75.3,tgt:504,cum:89.7,dlt:null},{f:'13/05',d:'Mi',ops:5,lines:386,lpo:77.2,tgt:420,cum:91.9,dlt:-66},{f:'14/05',d:'Ju',ops:5,lines:296,lpo:59.2,tgt:420,cum:70.5,dlt:-90},{f:'15/05',d:'Vi',ops:5,lines:218,lpo:43.6,tgt:420,cum:51.9,dlt:-78},{f:'18/05',d:'Lu',ops:6,lines:336,lpo:56,tgt:504,cum:66.7,dlt:118},{f:'19/05',d:'Ma',ops:5,lines:438,lpo:87.6,tgt:420,cum:104.3,dlt:102},{f:'20/05',d:'Mi',ops:5,lines:358,lpo:71.6,tgt:420,cum:85.2,dlt:-80}];
+const day7Rows=[{f:'12/05',d:'Ma',ops:6,lines:452,lpo:75.3,tgt:504,cum:89.7,dlt:null,cl:142,clops:4,sl:310,slops:5},{f:'13/05',d:'Mi',ops:5,lines:386,lpo:77.2,tgt:420,cum:91.9,dlt:-66,cl:122,clops:5,sl:264,slops:3},{f:'14/05',d:'Ju',ops:5,lines:296,lpo:59.2,tgt:420,cum:70.5,dlt:-90,cl:84,clops:4,sl:212,slops:4},{f:'15/05',d:'Vi',ops:5,lines:218,lpo:43.6,tgt:420,cum:51.9,dlt:-78,cl:49,clops:3,sl:169,slops:4},{f:'18/05',d:'Lu',ops:6,lines:336,lpo:56,tgt:504,cum:66.7,dlt:118,cl:60,clops:2,sl:276,slops:5},{f:'19/05',d:'Ma',ops:5,lines:438,lpo:87.6,tgt:420,cum:104.3,dlt:102,cl:103,clops:5,sl:335,slops:4},{f:'20/05',d:'Mi',ops:5,lines:358,lpo:71.6,tgt:420,cum:85.2,dlt:-80,cl:90,clops:3,sl:268,slops:3}];
 const evol30Labels=['08/04','09/04','10/04','13/04','14/04','15/04','16/04','17/04','20/04','21/04','22/04','23/04','24/04','27/04','28/04','29/04','30/04','04/05','05/05','06/05','07/05','08/05','11/05','12/05','13/05','14/05','15/05','18/05','19/05','20/05'];
 const evol30Data=[348,301,219,332,342,191,374,431,395,370,305,358,247,373,375,272,349,352,382,407,762,442,574,452,386,296,218,336,438,358];
+const evol30CL=[121,114,72,102,97,41,85,88,156,86,90,134,66,125,116,125,58,90,111,70,63,83,182,142,122,84,49,60,103,90];
+const evol30SL=[227,187,147,230,245,150,289,343,239,284,215,224,181,248,259,147,291,262,271,337,699,359,392,310,264,212,169,276,335,268];
+var _grpFilter='all';
 
 // Tab navigation
 function switchTab(name){
@@ -849,6 +864,77 @@ const chartEvol30=new Chart('chartEvol30',{type:'line',data:{
   plugins:{legend:{display:false},tooltip:{callbacks:{label:function(ctx){return ctx.parsed.y.toLocaleString('es-AR')+' lineas';}}}},
   scales:{y:{min:0,grid:{color:'#eeeeee'},ticks:{color:'#666666'}},x:{grid:{display:false},ticks:{color:'#666666',font:{size:9},maxTicksLimit:15}}}}});
 
+function setGrpFilter(g){
+  _grpFilter=g;
+  // Botones
+  document.getElementById('grpBtnAll').classList.toggle('active',g==='all');
+  document.getElementById('grpBtnCL').classList.toggle('active',g==='cl');
+  document.getElementById('grpBtnSL').classList.toggle('active',g==='sl');
+  // Datos del chart
+  var data=g==='cl'?evol30CL:g==='sl'?evol30SL:evol30Data;
+  var col=g==='cl'?'#2563eb':g==='sl'?'#16a34a':'#2563eb';
+  var bg=g==='cl'?'rgba(37,99,235,.08)':g==='sl'?'rgba(22,163,74,.08)':'rgba(37,99,235,.08)';
+  chartEvol30.data.datasets[0].data=data;
+  chartEvol30.data.datasets[0].borderColor=col;
+  chartEvol30.data.datasets[0].backgroundColor=bg;
+  chartEvol30.update();
+  // Titulo
+  var lbl=g==='cl'?'Con Logo':g==='sl'?'Sin Logo':'Con Logo + Sin Logo';
+  document.getElementById('evol30Title').textContent='📈 Evolución diaria del equipo — últimos 30 días hábiles';
+  document.getElementById('evol30Sub').textContent='Total líneas picking regular ('+lbl+') — equipo completo';
+  // Rebuild tabla 7 dias con filtro
+  _build7dTable();
+}
+
+function _build7dTable(){
+  var b=document.getElementById('body7d');
+  var f=document.getElementById('foot7d');
+  if(!day7Rows||!day7Rows.length){
+    b.innerHTML='<tr><td colspan="8" style="text-align:center;color:#aaa;padding:20px">Sin datos disponibles</td></tr>';
+    return;
+  }
+  b.innerHTML='';
+  var g=_grpFilter;
+  day7Rows.forEach(function(r){
+    var lines=g==='cl'?r.cl:g==='sl'?r.sl:r.lines;
+    var ops=g==='cl'?r.clops:g==='sl'?r.slops:r.ops;
+    var lpo=ops?Math.round(lines/ops*10)/10:0;
+    var tgt=ops*84;
+    var cum=tgt?Math.round(lines/tgt*1000)/10:0;
+    var cumC=cum>=100?'#16a34a':cum>=70?'#d97706':'#dc2626';
+    var dltStr=g!=='all'?'&mdash;':(r.dlt===null?'&mdash;':r.dlt>0?'<span style="color:#16a34a;font-weight:700">+'+r.dlt+'</span>':r.dlt<0?'<span style="color:#dc2626;font-weight:700">'+r.dlt+'</span>':'<span style="color:#999">0</span>');
+    b.innerHTML+='<tr>'
+      +'<td><strong>'+r.f+'</strong></td>'
+      +'<td>'+r.d+'</td>'
+      +'<td style="text-align:right">'+ops+'</td>'
+      +'<td style="text-align:right"><strong>'+lines.toLocaleString('es-AR')+'</strong></td>'
+      +'<td style="text-align:right">'+lpo+'</td>'
+      +'<td style="text-align:right">'+(tgt||'&mdash;')+'</td>'
+      +'<td style="text-align:center;font-weight:700;color:'+cumC+'">'+cum+'%</td>'
+      +'<td style="text-align:center">'+dltStr+'</td>'
+      +'</tr>';
+  });
+  var aL=Math.round(day7Rows.reduce(function(s,r){return s+(g==='cl'?r.cl:g==='sl'?r.sl:r.lines);},0)/day7Rows.length);
+  var aO=(day7Rows.reduce(function(s,r){return s+(g==='cl'?r.clops:g==='sl'?r.slops:r.ops);},0)/day7Rows.length).toFixed(1);
+  var aP=parseFloat(aO)?Math.round(aL/parseFloat(aO)*10)/10:0;
+  var aC=(day7Rows.reduce(function(s,r){
+    var li=g==='cl'?r.cl:g==='sl'?r.sl:r.lines;
+    var op=g==='cl'?r.clops:g==='sl'?r.slops:r.ops;
+    var t=op*84;
+    return s+(t?li/t*100:0);
+  },0)/day7Rows.length).toFixed(1);
+  var acC=parseFloat(aC)>=100?'#16a34a':parseFloat(aC)>=70?'#d97706':'#dc2626';
+  f.innerHTML='<tr>'
+    +'<td colspan="2" style="padding:9px 11px">PROM 7 D&Iacute;AS</td>'
+    +'<td style="text-align:right;padding:9px 11px">'+aO+'</td>'
+    +'<td style="text-align:right;padding:9px 11px">'+aL.toLocaleString('es-AR')+'</td>'
+    +'<td style="text-align:right;padding:9px 11px">'+aP+'</td>'
+    +'<td style="text-align:right;padding:9px 11px">&mdash;</td>'
+    +'<td style="text-align:center;padding:9px 11px;color:'+acC+'">'+aC+'%</td>'
+    +'<td style="text-align:center;padding:9px 11px">&mdash;</td>'
+    +'</tr>';
+}
+
 const chartMerma=null; // canvas eliminado — datos de Pedido Merma no se muestran
 
 const chartPie=new Chart('chartPie',{type:'line',data:{
@@ -928,43 +1014,8 @@ try {
   document.getElementById('selAnio').value='2026';
   document.getElementById('selMes').value='5';
   applyFilter();
-  // Poblar tabla 7 dias (datos estaticos, no cambian con filtros)
-  (function(){
-    var b=document.getElementById('body7d');
-    var f=document.getElementById('foot7d');
-    if(!day7Rows||!day7Rows.length){
-      b.innerHTML='<tr><td colspan="8" style="text-align:center;color:#aaa;padding:20px">Sin datos disponibles</td></tr>';
-      return;
-    }
-    day7Rows.forEach(function(r){
-      var cumC=r.cum>=100?'#16a34a':r.cum>=70?'#d97706':'#dc2626';
-      var dltStr=r.dlt===null?'&mdash;':r.dlt>0?'<span style="color:#16a34a;font-weight:700">+'+r.dlt+'</span>':r.dlt<0?'<span style="color:#dc2626;font-weight:700">'+r.dlt+'</span>':'<span style="color:#999">0</span>';
-      b.innerHTML+='<tr>'
-        +'<td><strong>'+r.f+'</strong></td>'
-        +'<td>'+r.d+'</td>'
-        +'<td style="text-align:right">'+r.ops+'</td>'
-        +'<td style="text-align:right"><strong>'+r.lines.toLocaleString('es-AR')+'</strong></td>'
-        +'<td style="text-align:right">'+r.lpo+'</td>'
-        +'<td style="text-align:right">'+r.tgt+'</td>'
-        +'<td style="text-align:center;font-weight:700;color:'+cumC+'">'+r.cum+'%</td>'
-        +'<td style="text-align:center">'+dltStr+'</td>'
-        +'</tr>';
-    });
-    var aL=Math.round(day7Rows.reduce(function(s,r){return s+r.lines;},0)/day7Rows.length);
-    var aO=(day7Rows.reduce(function(s,r){return s+r.ops;},0)/day7Rows.length).toFixed(1);
-    var aP=(day7Rows.reduce(function(s,r){return s+r.lpo;},0)/day7Rows.length).toFixed(1);
-    var aC=(day7Rows.reduce(function(s,r){return s+r.cum;},0)/day7Rows.length).toFixed(1);
-    var acC=parseFloat(aC)>=100?'#16a34a':parseFloat(aC)>=70?'#d97706':'#dc2626';
-    f.innerHTML='<tr>'
-      +'<td colspan="2" style="padding:9px 11px">PROM 7 D&Iacute;AS</td>'
-      +'<td style="text-align:right;padding:9px 11px">'+aO+'</td>'
-      +'<td style="text-align:right;padding:9px 11px">'+aL.toLocaleString('es-AR')+'</td>'
-      +'<td style="text-align:right;padding:9px 11px">'+aP+'</td>'
-      +'<td style="text-align:right;padding:9px 11px">&mdash;</td>'
-      +'<td style="text-align:center;padding:9px 11px;color:'+acC+'">'+aC+'%</td>'
-      +'<td style="text-align:center;padding:9px 11px">&mdash;</td>'
-      +'</tr>';
-  })();
+  // Poblar tabla 7 dias (datos estaticos, filtrable por grupo)
+  _build7dTable();
   // Si ya hay dark mode guardado, aplicar colores a los charts recién creados
   if(document.body.classList.contains('dark')) updateChartColors(true);
 } catch(err) {

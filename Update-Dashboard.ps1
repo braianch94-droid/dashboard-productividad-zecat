@@ -139,6 +139,7 @@ try {
     $pieMes     = @{}
     $allMon     = @{}
     $allResp    = @{}   # pickeadores regulares unicos
+    $dayGroupData = @{}  # date → @{CL;SL;CLops;SLops} para filtros Web
     $allOperators = @{}
     $opsByDay   = @{}   # operarios por dia (todos los grupos reales)
 
@@ -196,6 +197,15 @@ try {
             $pkMes[$key].L+=$L; $pkMes[$key].U+=$U; $pkMes[$key].Olas++
             $pkMes[$key].Days[$ymd]=$true
             if($grp -like "*CON LOGO*"){ $pkMes[$key].CL++ } else { $pkMes[$key].SL++ }
+            # Acumular por grupo por dia (para filtros Web)
+            if(-not $dayGroupData[$ymd]){ $dayGroupData[$ymd]=@{CL=0;SL=0;CLops=@{};SLops=@{}} }
+            if($grp -like "*CON LOGO*"){
+                $dayGroupData[$ymd].CL += $L
+                $dayGroupData[$ymd].CLops[$picker] = $true
+            } else {
+                $dayGroupData[$ymd].SL += $L
+                $dayGroupData[$ymd].SLops[$picker] = $true
+            }
         }
         if($isLezcano){
             if(-not $lezcanoMes[$ym]){ $lezcanoMes[$ym]=@{L=0;U=0;Olas=0;Days=@{}} }
@@ -407,10 +417,16 @@ try {
         $d7T=$d7n*$TARGET
         $d7C=if($d7T){[Math]::Round($d7L/$d7T*100,1)}else{0}
         $d7Dlt=if($null -ne $prevD7L){[int]($d7L-$prevD7L)}else{$null}
+        $d7gd=$dayGroupData[$d7ymd]
+        $d7CL=if($d7gd){[int]$d7gd.CL}else{0}
+        $d7SL=if($d7gd){[int]$d7gd.SL}else{0}
+        $d7CLn=if($d7gd){$d7gd.CLops.Count}else{0}
+        $d7SLn=if($d7gd){$d7gd.SLops.Count}else{0}
         $day7Rows.Add([PSCustomObject]@{
             Fecha=$d7dt.ToString("dd/MM")
             DiaSem=@('Do','Lu','Ma','Mi','Ju','Vi','Sa')[[int]$d7dt.DayOfWeek]
             Ops=$d7n;Lines=[int]$d7L;LinesPerOp=$d7LD;Target=$d7T;Cumpl=$d7C;Delta=$d7Dlt
+            CLLines=$d7CL;CLOps=$d7CLn;SLLines=$d7SL;SLOps=$d7SLn
         })
         $prevD7L=$d7L
     }
@@ -1505,7 +1521,7 @@ try {
     $jsDay7Parts=[System.Collections.Generic.List[string]]::new()
     foreach($r7 in $day7Rows){
         $dlt7=if($null -eq $r7.Delta){"null"}else{[string][int]$r7.Delta}
-        $jsDay7Parts.Add("{f:'$($r7.Fecha)',d:'$($r7.DiaSem)',ops:$($r7.Ops),lines:$($r7.Lines),lpo:$($r7.LinesPerOp),tgt:$($r7.Target),cum:$($r7.Cumpl),dlt:$dlt7}")
+        $jsDay7Parts.Add("{f:'$($r7.Fecha)',d:'$($r7.DiaSem)',ops:$($r7.Ops),lines:$($r7.Lines),lpo:$($r7.LinesPerOp),tgt:$($r7.Target),cum:$($r7.Cumpl),dlt:$dlt7,cl:$($r7.CLLines),clops:$($r7.CLOps),sl:$($r7.SLLines),slops:$($r7.SLOps)}")
     }
     $jsDay7Rows="["+($jsDay7Parts -join ",")+"]"
 
@@ -1520,6 +1536,16 @@ try {
     }
     $jsEvol30Labels="["+($evol30LblParts -join ",")+"]"
     $jsEvol30Data="["+($evol30DataParts -join ",")+"]"
+    # Datos por grupo (Con Logo / Sin Logo) para filtros
+    $evol30CLParts=[System.Collections.Generic.List[string]]::new()
+    $evol30SLParts=[System.Collections.Generic.List[string]]::new()
+    foreach($e30d in $evol30Dates){
+        $e30gd=$dayGroupData[$e30d]
+        $evol30CLParts.Add($(if($e30gd){"$([int]$e30gd.CL)"}else{"0"}))
+        $evol30SLParts.Add($(if($e30gd){"$([int]$e30gd.SL)"}else{"0"}))
+    }
+    $jsEvol30CL="["+($evol30CLParts -join ",")+"]"
+    $jsEvol30SL="["+($evol30SLParts -join ",")+"]"
 
     $html = @"
 <!DOCTYPE html>
@@ -1604,6 +1630,13 @@ body.dark .info-box{background:#1e293b;border-color:#334155;color:#94a3b8}
 tfoot td{border-top:2px solid #e0e0e0;font-weight:700}
 body.dark tfoot tr{background:#0f172a}
 body.dark tfoot td{color:#e2e8f0;border-top-color:#334155}
+.grp-btns{display:flex;gap:8px;margin-bottom:14px;flex-wrap:wrap}
+.grp-btn{border:1.5px solid #cccccc;border-radius:20px;padding:5px 16px;font-size:12px;font-weight:600;cursor:pointer;background:white;color:#555555;transition:all .18s}
+.grp-btn:hover{border-color:#2563eb;color:#2563eb}
+.grp-btn.active{background:#2563eb;border-color:#2563eb;color:white}
+body.dark .grp-btn{background:#1e293b;border-color:#334155;color:#94a3b8}
+body.dark .grp-btn:hover{border-color:#3b82f6;color:#60a5fa}
+body.dark .grp-btn.active{background:#2563eb;border-color:#2563eb;color:white}
 #themeToggle{background:rgba(255,255,255,.12);border:1px solid rgba(255,255,255,.18);border-radius:50px;width:42px;height:42px;color:white;cursor:pointer;font-size:18px;display:flex;align-items:center;justify-content:center;transition:all .2s;flex-shrink:0}
 #themeToggle:hover{background:rgba(255,255,255,.22);transform:scale(1.08)}
 </style>
@@ -1664,10 +1697,15 @@ body.dark tfoot td{color:#e2e8f0;border-top-color:#334155}
 <!-- ===== SECCION: PICKING ===== -->
 <div id="sec-picking" class="sec active">
 
+<div class="grp-btns">
+  <button class="grp-btn active" id="grpBtnAll" onclick="setGrpFilter('all')">Todos (Con + Sin Logo)</button>
+  <button class="grp-btn" id="grpBtnCL" onclick="setGrpFilter('cl')">Con Logo</button>
+  <button class="grp-btn" id="grpBtnSL" onclick="setGrpFilter('sl')">Sin Logo</button>
+</div>
 <div class="charts-row c1">
   <div class="chart-card" style="border-top:3px solid #2563eb;margin-bottom:0">
-    <div class="chart-title">&#128200; Evoluci&oacute;n diaria del equipo &mdash; &uacute;ltimos 30 d&iacute;as h&aacute;biles</div>
-    <div class="chart-subtitle">Total l&iacute;neas picking regular (SIN LOGO + CON LOGO) &mdash; equipo completo</div>
+    <div class="chart-title" id="evol30Title">&#128200; Evoluci&oacute;n diaria del equipo &mdash; &uacute;ltimos 30 d&iacute;as h&aacute;biles</div>
+    <div class="chart-subtitle" id="evol30Sub">Total l&iacute;neas picking regular (Con Logo + Sin Logo) &mdash; equipo completo</div>
     <div style="position:relative;height:200px"><canvas id="chartEvol30"></canvas></div>
   </div>
 </div>
@@ -1883,6 +1921,9 @@ const MES=['','Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto',
 const day7Rows=$jsDay7Rows;
 const evol30Labels=$jsEvol30Labels;
 const evol30Data=$jsEvol30Data;
+const evol30CL=$jsEvol30CL;
+const evol30SL=$jsEvol30SL;
+var _grpFilter='all';
 
 // Tab navigation
 function switchTab(name){
@@ -2336,6 +2377,77 @@ const chartEvol30=new Chart('chartEvol30',{type:'line',data:{
   plugins:{legend:{display:false},tooltip:{callbacks:{label:function(ctx){return ctx.parsed.y.toLocaleString('es-AR')+' lineas';}}}},
   scales:{y:{min:0,grid:{color:'#eeeeee'},ticks:{color:'#666666'}},x:{grid:{display:false},ticks:{color:'#666666',font:{size:9},maxTicksLimit:15}}}}});
 
+function setGrpFilter(g){
+  _grpFilter=g;
+  // Botones
+  document.getElementById('grpBtnAll').classList.toggle('active',g==='all');
+  document.getElementById('grpBtnCL').classList.toggle('active',g==='cl');
+  document.getElementById('grpBtnSL').classList.toggle('active',g==='sl');
+  // Datos del chart
+  var data=g==='cl'?evol30CL:g==='sl'?evol30SL:evol30Data;
+  var col=g==='cl'?'#2563eb':g==='sl'?'#16a34a':'#2563eb';
+  var bg=g==='cl'?'rgba(37,99,235,.08)':g==='sl'?'rgba(22,163,74,.08)':'rgba(37,99,235,.08)';
+  chartEvol30.data.datasets[0].data=data;
+  chartEvol30.data.datasets[0].borderColor=col;
+  chartEvol30.data.datasets[0].backgroundColor=bg;
+  chartEvol30.update();
+  // Titulo
+  var lbl=g==='cl'?'Con Logo':g==='sl'?'Sin Logo':'Con Logo + Sin Logo';
+  document.getElementById('evol30Title').textContent='📈 Evolución diaria del equipo — últimos 30 días hábiles';
+  document.getElementById('evol30Sub').textContent='Total líneas picking regular ('+lbl+') — equipo completo';
+  // Rebuild tabla 7 dias con filtro
+  _build7dTable();
+}
+
+function _build7dTable(){
+  var b=document.getElementById('body7d');
+  var f=document.getElementById('foot7d');
+  if(!day7Rows||!day7Rows.length){
+    b.innerHTML='<tr><td colspan="8" style="text-align:center;color:#aaa;padding:20px">Sin datos disponibles</td></tr>';
+    return;
+  }
+  b.innerHTML='';
+  var g=_grpFilter;
+  day7Rows.forEach(function(r){
+    var lines=g==='cl'?r.cl:g==='sl'?r.sl:r.lines;
+    var ops=g==='cl'?r.clops:g==='sl'?r.slops:r.ops;
+    var lpo=ops?Math.round(lines/ops*10)/10:0;
+    var tgt=ops*$TARGET;
+    var cum=tgt?Math.round(lines/tgt*1000)/10:0;
+    var cumC=cum>=100?'#16a34a':cum>=70?'#d97706':'#dc2626';
+    var dltStr=g!=='all'?'&mdash;':(r.dlt===null?'&mdash;':r.dlt>0?'<span style="color:#16a34a;font-weight:700">+'+r.dlt+'</span>':r.dlt<0?'<span style="color:#dc2626;font-weight:700">'+r.dlt+'</span>':'<span style="color:#999">0</span>');
+    b.innerHTML+='<tr>'
+      +'<td><strong>'+r.f+'</strong></td>'
+      +'<td>'+r.d+'</td>'
+      +'<td style="text-align:right">'+ops+'</td>'
+      +'<td style="text-align:right"><strong>'+lines.toLocaleString('es-AR')+'</strong></td>'
+      +'<td style="text-align:right">'+lpo+'</td>'
+      +'<td style="text-align:right">'+(tgt||'&mdash;')+'</td>'
+      +'<td style="text-align:center;font-weight:700;color:'+cumC+'">'+cum+'%</td>'
+      +'<td style="text-align:center">'+dltStr+'</td>'
+      +'</tr>';
+  });
+  var aL=Math.round(day7Rows.reduce(function(s,r){return s+(g==='cl'?r.cl:g==='sl'?r.sl:r.lines);},0)/day7Rows.length);
+  var aO=(day7Rows.reduce(function(s,r){return s+(g==='cl'?r.clops:g==='sl'?r.slops:r.ops);},0)/day7Rows.length).toFixed(1);
+  var aP=parseFloat(aO)?Math.round(aL/parseFloat(aO)*10)/10:0;
+  var aC=(day7Rows.reduce(function(s,r){
+    var li=g==='cl'?r.cl:g==='sl'?r.sl:r.lines;
+    var op=g==='cl'?r.clops:g==='sl'?r.slops:r.ops;
+    var t=op*$TARGET;
+    return s+(t?li/t*100:0);
+  },0)/day7Rows.length).toFixed(1);
+  var acC=parseFloat(aC)>=100?'#16a34a':parseFloat(aC)>=70?'#d97706':'#dc2626';
+  f.innerHTML='<tr>'
+    +'<td colspan="2" style="padding:9px 11px">PROM 7 D&Iacute;AS</td>'
+    +'<td style="text-align:right;padding:9px 11px">'+aO+'</td>'
+    +'<td style="text-align:right;padding:9px 11px">'+aL.toLocaleString('es-AR')+'</td>'
+    +'<td style="text-align:right;padding:9px 11px">'+aP+'</td>'
+    +'<td style="text-align:right;padding:9px 11px">&mdash;</td>'
+    +'<td style="text-align:center;padding:9px 11px;color:'+acC+'">'+aC+'%</td>'
+    +'<td style="text-align:center;padding:9px 11px">&mdash;</td>'
+    +'</tr>';
+}
+
 const chartMerma=null; // canvas eliminado — datos de Pedido Merma no se muestran
 
 const chartPie=new Chart('chartPie',{type:'line',data:{
@@ -2415,43 +2527,8 @@ try {
   document.getElementById('selAnio').value='$jsInitYear';
   document.getElementById('selMes').value='$jsInitMon';
   applyFilter();
-  // Poblar tabla 7 dias (datos estaticos, no cambian con filtros)
-  (function(){
-    var b=document.getElementById('body7d');
-    var f=document.getElementById('foot7d');
-    if(!day7Rows||!day7Rows.length){
-      b.innerHTML='<tr><td colspan="8" style="text-align:center;color:#aaa;padding:20px">Sin datos disponibles</td></tr>';
-      return;
-    }
-    day7Rows.forEach(function(r){
-      var cumC=r.cum>=100?'#16a34a':r.cum>=70?'#d97706':'#dc2626';
-      var dltStr=r.dlt===null?'&mdash;':r.dlt>0?'<span style="color:#16a34a;font-weight:700">+'+r.dlt+'</span>':r.dlt<0?'<span style="color:#dc2626;font-weight:700">'+r.dlt+'</span>':'<span style="color:#999">0</span>';
-      b.innerHTML+='<tr>'
-        +'<td><strong>'+r.f+'</strong></td>'
-        +'<td>'+r.d+'</td>'
-        +'<td style="text-align:right">'+r.ops+'</td>'
-        +'<td style="text-align:right"><strong>'+r.lines.toLocaleString('es-AR')+'</strong></td>'
-        +'<td style="text-align:right">'+r.lpo+'</td>'
-        +'<td style="text-align:right">'+r.tgt+'</td>'
-        +'<td style="text-align:center;font-weight:700;color:'+cumC+'">'+r.cum+'%</td>'
-        +'<td style="text-align:center">'+dltStr+'</td>'
-        +'</tr>';
-    });
-    var aL=Math.round(day7Rows.reduce(function(s,r){return s+r.lines;},0)/day7Rows.length);
-    var aO=(day7Rows.reduce(function(s,r){return s+r.ops;},0)/day7Rows.length).toFixed(1);
-    var aP=(day7Rows.reduce(function(s,r){return s+r.lpo;},0)/day7Rows.length).toFixed(1);
-    var aC=(day7Rows.reduce(function(s,r){return s+r.cum;},0)/day7Rows.length).toFixed(1);
-    var acC=parseFloat(aC)>=100?'#16a34a':parseFloat(aC)>=70?'#d97706':'#dc2626';
-    f.innerHTML='<tr>'
-      +'<td colspan="2" style="padding:9px 11px">PROM 7 D&Iacute;AS</td>'
-      +'<td style="text-align:right;padding:9px 11px">'+aO+'</td>'
-      +'<td style="text-align:right;padding:9px 11px">'+aL.toLocaleString('es-AR')+'</td>'
-      +'<td style="text-align:right;padding:9px 11px">'+aP+'</td>'
-      +'<td style="text-align:right;padding:9px 11px">&mdash;</td>'
-      +'<td style="text-align:center;padding:9px 11px;color:'+acC+'">'+aC+'%</td>'
-      +'<td style="text-align:center;padding:9px 11px">&mdash;</td>'
-      +'</tr>';
-  })();
+  // Poblar tabla 7 dias (datos estaticos, filtrable por grupo)
+  _build7dTable();
   // Si ya hay dark mode guardado, aplicar colores a los charts recién creados
   if(document.body.classList.contains('dark')) updateChartColors(true);
 } catch(err) {
