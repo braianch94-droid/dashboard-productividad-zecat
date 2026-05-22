@@ -2425,7 +2425,7 @@ chartEvol.data.datasets.slice(0,-1).forEach(function(ds){pickerDataFull.push(ds.
 const chartEvol30=new Chart('chartEvol30',{type:'line',data:{
   labels:evol30Labels,datasets:[
     {label:'Total lineas equipo',data:evol30Data,borderColor:'#2563eb',backgroundColor:'rgba(37,99,235,.08)',borderWidth:2.5,tension:.3,fill:true,pointRadius:3,pointHoverRadius:5},
-    {label:'Target equipo (pickers×$TARGET)',data:evol30Target,borderColor:'rgba(220,38,38,.65)',borderWidth:1.5,borderDash:[7,4],pointRadius:0,fill:false,tension:0}
+    {label:'Target',data:evol30Target,borderColor:'rgba(220,38,38,.65)',borderWidth:1.5,borderDash:[7,4],pointRadius:0,fill:false,tension:0}
   ]},options:{responsive:true,maintainAspectRatio:false,
   plugins:{legend:{display:true,position:'bottom',labels:{boxWidth:12,font:{size:10},color:'#444444'}},tooltip:{callbacks:{label:function(ctx){return ctx.dataset.label+': '+ctx.parsed.y.toLocaleString('es-AR')+(ctx.datasetIndex===0?' lineas':'');}}}},
   scales:{y:{min:0,grid:{color:'#eeeeee'},ticks:{color:'#666666'}},x:{grid:{display:false},ticks:{color:'#666666',font:{size:9},maxTicksLimit:15}}}}});
