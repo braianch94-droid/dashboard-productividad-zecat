@@ -135,6 +135,7 @@ try {
 
     $pkMes      = @{}   # picking regular por operario+mes
     $pkDay      = @{}   # lineas por operario+fecha (todos los grupos)
+    $pkDayOrd   = @{}   # ordenes por operario+fecha (picking regular)
     $staffByMes = @{}   # solo SIN LOGO / CON LOGO (con y sin pickeador)
     $lezcanoMes = @{}
     $mermaMes   = @{}
@@ -148,6 +149,7 @@ try {
     for($r=2; $r -le $pkRows; $r++){
         $L     = [double]($pkArr[$r,5] -as [double])
         $U     = [double]($pkArr[$r,6] -as [double])
+        $O_ord = [double]($pkArr[$r,4] -as [double])
         $grp   = "$($pkArr[$r,9])".Trim().ToUpper()
         $pkRaw = $pkArr[$r,10]
         # #N/A en Excel puede ser [double], [int] o string negativo segun version COM
@@ -197,9 +199,10 @@ try {
 
         if($isRegular){
             $key = "$picker|$ym"
-            if(-not $pkMes[$key]){ $pkMes[$key]=@{L=0;U=0;Olas=0;Days=@{};CL=0;SL=0} }
-            $pkMes[$key].L+=$L; $pkMes[$key].U+=$U; $pkMes[$key].Olas++
+            if(-not $pkMes[$key]){ $pkMes[$key]=@{L=0;U=0;O=0;Olas=0;Days=@{};CL=0;SL=0} }
+            $pkMes[$key].L+=$L; $pkMes[$key].U+=$U; $pkMes[$key].O+=$O_ord; $pkMes[$key].Olas++
             $pkMes[$key].Days[$ymd]=$true
+            if(-not $pkDayOrd[$dk]){$pkDayOrd[$dk]=0}; $pkDayOrd[$dk]+=$O_ord
             if($grp -like "*CON LOGO*"){ $pkMes[$key].CL++ } else { $pkMes[$key].SL++ }
             # Acumular por grupo por dia (para filtros Web)
             if(-not $dayGroupData[$ymd]){ $dayGroupData[$ymd]=@{CL=0;SL=0;CLops=@{};SLops=@{}} }
@@ -348,6 +351,7 @@ try {
             $rate=if($pd.L){[Math]::Round($rec.Cnt/($pd.L/1000),2)}else{0}
             $sumRows.Add([PSCustomObject]@{
                 YM=$ym;MesNom=$ymN;Resp=$resp;Dias=$days;Olas=$pd.Olas;Lineas=[int]$pd.L
+                Ordenes=[int]$pd.O
                 LineasDia=$ld;Target=$tgt;Diff=$diff;Cumplim=$comp
                 Unidades=[int]$pd.U;ULinea=$ul;ConLogo=$pd.CL;SinLogo=$pd.SL;PctConLogo=$pctCL
                 RecCnt=$rec.Cnt;RecQty=$rec.Qty;RecRate=$rate
@@ -1472,7 +1476,7 @@ try {
         foreach($op in $mProdRows){
             $rn=$op.Resp -replace "'",""
             $tr=if($trendByResp[$op.Resp]){($trendByResp[$op.Resp].Txt -replace "'","")}else{"-"}
-            $pickerParts.Add("{resp:'$rn',dias:$($op.Dias),olas:$($op.Olas),lineas:$($op.Lineas),ld:$($op.LineasDia.ToString($IC)),cumpl:$($op.Cumplim.ToString($IC)),unidades:$($op.Unidades),recCnt:$($op.RecCnt),trend:'$tr'}")
+            $pickerParts.Add("{resp:'$rn',dias:$($op.Dias),olas:$($op.Olas),lineas:$($op.Lineas),ordenes:$($op.Ordenes),ld:$($op.LineasDia.ToString($IC)),cumpl:$($op.Cumplim.ToString($IC)),unidades:$($op.Unidades),recCnt:$($op.RecCnt),trend:'$tr'}")
         }
         $pickersArr="["+($pickerParts -join ",")+"]"
         $jsMonthlyDataParts.Add("'$mon':{totOps:$mTotOps,pickeadores:$mPickOficial,avgLD:$($mAvgLD.ToString($IC)),cumAv:$($mCumAv.ToString($IC)),totL:$mTotL,totU:$mTotU,totRC:$mTotRC,rateG:$($mRateG.ToString($IC)),totOlas:$mTotOlas,staffNec:$($mStaffNec.ToString($IC)),staffAct:$($mStaffAct.ToString($IC)),pickers:$pickersArr}")
@@ -1632,6 +1636,13 @@ try {
     $jsEvol30CL="["+($evol30CLParts -join ",")+"]"
     $jsEvol30SL="["+($evol30SLParts -join ",")+"]"
     $jsEvol30Target="["+($evol30TgtParts -join ",")+"]"
+    $evol30OrdParts=[System.Collections.Generic.List[string]]::new()
+    foreach($e30d in $evol30Dates){
+        $e30Ord=0
+        foreach($rsp in $sortedResp){$e30ok="$rsp|$e30d";if($pkDayOrd[$e30ok]){$e30Ord+=$pkDayOrd[$e30ok]}}
+        $evol30OrdParts.Add("$([int]$e30Ord)")
+    }
+    $jsEvol30Ord="["+($evol30OrdParts -join ",")+"]"
 
     # Resumen General: datos unificados por mes para TODOS los grupos
     $jsResumeParts = [System.Collections.Generic.List[string]]::new()
@@ -1641,7 +1652,7 @@ try {
         $pkArr2 = [System.Collections.Generic.List[string]]::new()
         foreach($op in $mPkRows2){
             $rn=$op.Resp -replace "'",""; $rc=$op.RecCnt
-            $pkArr2.Add("{resp:'$rn',dias:$($op.Dias),lineas:$($op.Lineas),ld:$($op.LineasDia.ToString($IC)),cumpl:$($op.Cumplim.ToString($IC)),recCnt:$rc}")
+            $pkArr2.Add("{resp:'$rn',dias:$($op.Dias),lineas:$($op.Lineas),ordenes:$($op.Ordenes),ld:$($op.LineasDia.ToString($IC)),cumpl:$($op.Cumplim.ToString($IC)),recCnt:$rc}")
         }
         $pkJs2 = "["+($pkArr2 -join ",")+"]"
         # Pie de Maquina (M1 y M2)
@@ -1954,7 +1965,7 @@ body.dark .worst-combo{border-color:#334155}
   <div class="rank-title" id="rankTitle">Ranking &mdash; Picking Regular</div>
   <div class="rank-sub">Ordenado por lineas/d&iacute;a &nbsp;|&nbsp; MERMA y PIE DE MAQUINA en sus tabs propios</div>
   <table>
-    <thead><tr><th>#</th><th>Operario</th><th style="text-align:right">D&iacute;as</th><th style="text-align:right">Olas</th><th style="text-align:right">Lineas</th><th style="text-align:center">Lin/D&iacute;a</th><th style="text-align:center">Cumpl%</th><th style="text-align:right">Unidades</th><th style="text-align:center">U/L&iacute;nea</th><th style="text-align:center">Reclamos</th><th style="text-align:center">Tasa Rec/1000</th><th style="text-align:center">Tendencia</th></tr></thead>
+    <thead><tr><th>#</th><th>Operario</th><th style="text-align:right">D&iacute;as</th><th style="text-align:right">Olas</th><th style="text-align:right">NPs</th><th style="text-align:right">Lineas</th><th style="text-align:center">Lin/D&iacute;a</th><th style="text-align:center">Cumpl%</th><th style="text-align:right">Unidades</th><th style="text-align:center">U/L&iacute;nea</th><th style="text-align:center">Reclamos</th><th style="text-align:center">Tasa Rec/1000</th><th style="text-align:center">Tendencia</th></tr></thead>
     <tbody id="rankBody"></tbody>
   </table>
 </div>
@@ -1963,7 +1974,7 @@ body.dark .worst-combo{border-color:#334155}
   <div class="rank-title">Totales por Operario &mdash; Per&iacute;odo seleccionado</div>
   <div class="rank-sub">Acumulado del per&iacute;odo &mdash; ordenado por total l&iacute;neas</div>
   <table>
-    <thead><tr><th>Operario</th><th style="text-align:right">Total D&iacute;as</th><th style="text-align:right">Total Olas</th><th style="text-align:right">Total L&iacute;neas</th><th style="text-align:center">Prom Lin/D&iacute;a</th><th style="text-align:center">Cumpl%</th><th style="text-align:right">Total Unidades</th><th style="text-align:center">Total Reclamos</th></tr></thead>
+    <thead><tr><th>Operario</th><th style="text-align:right">Total D&iacute;as</th><th style="text-align:right">Total Olas</th><th style="text-align:right">Total NPs</th><th style="text-align:right">Total L&iacute;neas</th><th style="text-align:center">Prom Lin/D&iacute;a</th><th style="text-align:center">Cumpl%</th><th style="text-align:right">Total Unidades</th><th style="text-align:center">Total Reclamos</th></tr></thead>
     <tbody id="totalesBody"></tbody>
   </table>
 </div>
@@ -2170,6 +2181,7 @@ body.dark .worst-combo{border-color:#334155}
       <th>Operario</th>
       <th>Grupo</th>
       <th style="text-align:right">Total L&iacute;neas</th>
+      <th style="text-align:right">NPs</th>
       <th style="text-align:center;width:150px">Lin/D&iacute;a</th>
       <th style="text-align:center">vs Target</th>
       <th style="text-align:center">Reclamos</th>
@@ -2251,6 +2263,7 @@ const evol30Data=$jsEvol30Data;
 const evol30CL=$jsEvol30CL;
 const evol30SL=$jsEvol30SL;
 const evol30Target=$jsEvol30Target;
+const evol30Ord=$jsEvol30Ord;
 const resumeData=$jsResumeData;
 const recDetail=$jsRecDetail;
 var _grpFilter='all';
@@ -2328,9 +2341,9 @@ function applyFilter(){
     d.pickers.forEach(function(pk){
       if(/^\-?\d+$/.test(pk.resp)) return;
       if(selOp!=='all'&&pk.resp!==selOp) return;
-      if(!rankMap[pk.resp]) rankMap[pk.resp]={dias:0,olas:0,lineas:0,unidades:0,recCnt:0,trend:pk.trend};
+      if(!rankMap[pk.resp]) rankMap[pk.resp]={dias:0,olas:0,lineas:0,ordenes:0,unidades:0,recCnt:0,trend:pk.trend};
       rankMap[pk.resp].dias+=pk.dias; rankMap[pk.resp].olas+=pk.olas;
-      rankMap[pk.resp].lineas+=pk.lineas; rankMap[pk.resp].unidades+=pk.unidades;
+      rankMap[pk.resp].lineas+=pk.lineas; rankMap[pk.resp].ordenes+=(pk.ordenes||0); rankMap[pk.resp].unidades+=pk.unidades;
       rankMap[pk.resp].recCnt+=pk.recCnt; rankMap[pk.resp].trend=pk.trend;
       if(selOp!=='all'){aggL+=pk.lineas;aggU+=pk.unidades;aggRC+=pk.recCnt;aggOlas+=pk.olas;opLDSum+=pk.ld;opValidM++;}
     });
@@ -2411,7 +2424,7 @@ function applyFilter(){
     var ld=p.dias?Math.round(p.lineas/p.dias*10)/10:0;
     var cumpl=Math.round(ld/TARGET*1000)/10;
     var tasa=p.lineas>0?Math.round(p.recCnt/(p.lineas/1000)*100)/100:0;
-    return {resp:resp,dias:p.dias,olas:p.olas,lineas:p.lineas,unidades:p.unidades,recCnt:p.recCnt,trend:p.trend,ld:ld,cumpl:cumpl,tasa:tasa};
+    return {resp:resp,dias:p.dias,olas:p.olas,lineas:p.lineas,ordenes:p.ordenes||0,unidades:p.unidades,recCnt:p.recCnt,trend:p.trend,ld:ld,cumpl:cumpl,tasa:tasa};
   }).sort(function(a,b){return b.ld-a.ld;});
 
   var tbody=document.getElementById('rankBody');
@@ -2430,6 +2443,7 @@ function applyFilter(){
       +'<td style="font-weight:600">'+p.resp+'</td>'
       +'<td style="text-align:right">'+p.dias+'</td>'
       +'<td style="text-align:right">'+p.olas+'</td>'
+      +'<td style="text-align:right">'+p.ordenes.toLocaleString("es-AR")+'</td>'
       +'<td style="text-align:right">'+p.lineas.toLocaleString("es-AR")+'</td>'
       +'<td style="text-align:center;font-weight:700;color:'+ldC+'">'+p.ld+'</td>'
       +'<td style="text-align:center;font-weight:700;color:'+cumC+'">'+p.cumpl+'%</td>'
@@ -2454,6 +2468,7 @@ function applyFilter(){
       +'<td style="font-weight:600">'+p.resp+'</td>'
       +'<td style="text-align:right">'+p.dias+'</td>'
       +'<td style="text-align:right">'+p.olas+'</td>'
+      +'<td style="text-align:right">'+p.ordenes.toLocaleString("es-AR")+'</td>'
       +'<td style="text-align:right">'+p.lineas.toLocaleString("es-AR")+'</td>'
       +'<td style="text-align:center;font-weight:700;color:'+ldC+'">'+p.ld+'</td>'
       +'<td style="text-align:center;font-weight:700;color:'+cumC+'">'+p.cumpl+'%</td>'
@@ -2797,11 +2812,16 @@ chartEvol.data.datasets.slice(0,-1).forEach(function(ds){pickerDataFull.push(ds.
 
 const chartEvol30=new Chart('chartEvol30',{type:'line',data:{
   labels:evol30Labels,datasets:[
-    {label:'Total lineas equipo',data:evol30Data,borderColor:'#2563eb',backgroundColor:'rgba(37,99,235,.08)',borderWidth:2.5,tension:.3,fill:true,pointRadius:3,pointHoverRadius:5},
-    {label:'Target',data:evol30Target,borderColor:'rgba(220,38,38,.65)',borderWidth:1.5,borderDash:[7,4],pointRadius:0,fill:false,tension:0}
+    {label:'Total líneas equipo',data:evol30Data,borderColor:'#2563eb',backgroundColor:'rgba(37,99,235,.08)',borderWidth:2.5,tension:.3,fill:true,pointRadius:3,pointHoverRadius:5,yAxisID:'y'},
+    {label:'Target líneas',data:evol30Target,borderColor:'rgba(220,38,38,.65)',borderWidth:1.5,borderDash:[7,4],pointRadius:0,fill:false,tension:0,yAxisID:'y'},
+    {label:'NPs (órdenes)',data:evol30Ord,borderColor:'#d97706',backgroundColor:'rgba(217,119,6,.06)',borderWidth:2,tension:.3,fill:false,pointRadius:2,pointHoverRadius:4,borderDash:[4,2],yAxisID:'y1'}
   ]},options:{responsive:true,maintainAspectRatio:false,
-  plugins:{legend:{display:true,position:'bottom',labels:{boxWidth:12,font:{size:10},color:'#444444'}},tooltip:{callbacks:{label:function(ctx){return ctx.dataset.label+': '+ctx.parsed.y.toLocaleString('es-AR')+(ctx.datasetIndex===0?' lineas':'');}}}},
-  scales:{y:{min:0,grid:{color:'#eeeeee'},ticks:{color:'#666666'}},x:{grid:{display:false},ticks:{color:'#666666',font:{size:9},maxTicksLimit:15}}}}});
+  plugins:{legend:{display:true,position:'bottom',labels:{boxWidth:12,font:{size:10},color:'#444444'}},tooltip:{mode:'index',intersect:false,callbacks:{label:function(ctx){var s=ctx.dataset.label+': '+ctx.parsed.y.toLocaleString('es-AR');if(ctx.datasetIndex===0||ctx.datasetIndex===1)s+=' lin';else s+=' NPs';return s;}}}},
+  scales:{
+    y:{min:0,position:'left',grid:{color:'#eeeeee'},ticks:{color:'#2563eb',font:{size:9}},title:{display:true,text:'Líneas',color:'#2563eb',font:{size:9}}},
+    y1:{min:0,position:'right',grid:{drawOnChartArea:false},ticks:{color:'#d97706',font:{size:9}},title:{display:true,text:'NPs',color:'#d97706',font:{size:9}}},
+    x:{grid:{display:false},ticks:{color:'#666666',font:{size:9},maxTicksLimit:15}}
+  }}});
 
 function setGrpFilter(g){
   _grpFilter=g;
@@ -2988,8 +3008,8 @@ function buildResumen(){
       d[g].forEach(function(op){
         if(/^\-?\d+$/.test(op.resp)) return;
         var k=op.resp+'||'+g;
-        if(!byOp[k]) byOp[k]={resp:op.resp,grupo:g,dias:0,lineas:0,ldSum:0,ldN:0,recCnt:0};
-        byOp[k].dias+=op.dias; byOp[k].lineas+=op.lineas;
+        if(!byOp[k]) byOp[k]={resp:op.resp,grupo:g,dias:0,lineas:0,ordenes:0,ldSum:0,ldN:0,recCnt:0};
+        byOp[k].dias+=op.dias; byOp[k].lineas+=op.lineas; byOp[k].ordenes+=(op.ordenes||0);
         byOp[k].ldSum+=op.ld; byOp[k].ldN++;
         byOp[k].recCnt+=op.recCnt;
       });
@@ -2997,7 +3017,7 @@ function buildResumen(){
   });
   var rows=Object.values(byOp).map(function(o){
     var ld=o.ldN?Math.round(o.ldSum/o.ldN*10)/10:0;
-    return {resp:o.resp,grupo:o.grupo,dias:o.dias,lineas:o.lineas,ld:ld,recCnt:o.recCnt};
+    return {resp:o.resp,grupo:o.grupo,dias:o.dias,lineas:o.lineas,ordenes:o.ordenes||0,ld:ld,recCnt:o.recCnt};
   }).sort(function(a,b){return b.ld-a.ld;});
 
   // === A: Podio Top 3 (solo picking) ===
@@ -3053,6 +3073,7 @@ function buildResumen(){
         +'<td style="font-weight:600">'+op.resp+'</td>'
         +'<td><span style="background:'+gc+'22;color:'+gc+';padding:2px 9px;border-radius:20px;font-size:11px;font-weight:600">'+gl+'</span></td>'
         +'<td style="text-align:right">'+op.lineas.toLocaleString()+'</td>'
+        +'<td style="text-align:right">'+(op.ordenes||0).toLocaleString()+'</td>'
         +'<td>'+ldCell+'</td>'
         +'<td style="text-align:center">'+tgtHtml+'</td>'
         +'<td style="text-align:center">'+recCell+'</td>';
